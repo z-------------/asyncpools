@@ -93,7 +93,7 @@ proc asyncPool*[T, I](futJobs: seq[FutJob[T, I]]; poolSize = DefaultPoolSize; fa
   resultFut
 
 proc asyncPool*[T](futProcs: seq[FutProc[T]]; poolSize = DefaultPoolSize; failureBehavior = DefaultFailureBehavior): Future[seq[T]] {.async.} =
-  let futJobs = futProcs.map(proc (futProc: FutProc[T]): FutJob[int, T] =
+  let futJobs = futProcs.map(proc (futProc: FutProc[T]): FutJob[T, int] =
     initFutJob(0, futProc)
   )
   let asyncPoolResult = await asyncPool(futJobs, poolSize, failureBehavior)
