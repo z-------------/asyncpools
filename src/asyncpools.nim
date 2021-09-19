@@ -23,13 +23,13 @@ import std/deques
 export deques # does not compile without this!
 
 type
-  AsyncPoolResult*[I, T] = object
+  AsyncPoolResult*[T, I] = object
     values*: seq[T]
     failures*: seq[I]
   FutProc[T] = () -> Future[T]
-  FutJob*[I, T] = object
-    info: I
+  FutJob*[T, I] = object
     futProc: FutProc[T]
+    info: I
   FailureBehavior* = enum
     fbContinue
     fbAbort
@@ -41,18 +41,18 @@ const
 template empty(s: untyped): bool =
   s.len == 0
 
-func initFutJob*[I, T](info: I; futProc: FutProc[T]): FutJob[I, T] =
-  result.info = info
+func initFutJob*[T, I](info: I; futProc: FutProc[T]): FutJob[T, I] =
   result.futProc = futProc
+  result.info = info
 
-func initAsyncPoolResult[I, T](values: seq[T]; failures: seq[I]): AsyncPoolResult[I, T] =
+func initAsyncPoolResult[T, I](values: seq[T]; failures: seq[I]): AsyncPoolResult[T, I] =
   result.values = values
   result.failures = failures
 
-proc asyncPool*[I, T](futJobs: seq[FutJob[I, T]]; poolSize = DefaultPoolSize; failureBehavior = DefaultFailureBehavior): Future[AsyncPoolResult[I, T]] =
+proc asyncPool*[T, I](futJobs: seq[FutJob[T, I]]; poolSize = DefaultPoolSize; failureBehavior = DefaultFailureBehavior): Future[AsyncPoolResult[T, I]] =
   var
     queue = futJobs.toDeque()
-    resultFut = newFuture[AsyncPoolResult[I, T]]("asyncPool")
+    resultFut = newFuture[AsyncPoolResult[T, I]]("asyncPool")
     activeCount = 0
     doneCount = 0
     values: seq[T]
@@ -93,8 +93,8 @@ proc asyncPool*[I, T](futJobs: seq[FutJob[I, T]]; poolSize = DefaultPoolSize; fa
   resultFut
 
 proc asyncPool*[T](futProcs: seq[FutProc[T]]; poolSize = DefaultPoolSize; failureBehavior = DefaultFailureBehavior): Future[seq[T]] {.async.} =
-  let futJobs: seq[FutJob[string, T]] = futProcs.map(proc (futProc: FutProc[T]): FutJob[string, T] =
-    initFutJob("?", futProc)
+  let futJobs = futProcs.map(proc (futProc: FutProc[T]): FutJob[int, T] =
+    initFutJob(0, futProc)
   )
-  let asyncPoolResult = await asyncPool[string, T](futJobs, poolSize, failureBehavior)
+  let asyncPoolResult = await asyncPool(futJobs, poolSize, failureBehavior)
   return asyncPoolResult.values
