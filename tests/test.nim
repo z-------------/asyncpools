@@ -32,20 +32,3 @@ test "it works":
   check outputs.len == inputs.len
   for x in inputs:
     check outputs.contains(x)
-
-test "failure reporting works":
-  proc fut(fail: bool): Future[int] {.async.} =
-    if fail:
-      raise newException(CatchableError, "fail")
-    return 42
-
-  let outputs = waitFor asyncPool(@[
-    initFutJob("one", () {.closure.} => fut(false)),
-    initFutJob("two", () {.closure.} => fut(true)),
-    initFutJob("three", () {.closure.} => fut(false)),
-  ], DefaultPoolSize, fbContinue)
-
-  check outputs.values.len == 2
-  check outputs.values == @[42, 42]
-  check outputs.failures.len == 1
-  check outputs.failures == @["two"]
