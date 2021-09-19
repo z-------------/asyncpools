@@ -20,6 +20,8 @@ import std/asyncfutures
 import std/sugar
 import std/deques
 
+export deques # does not compile without this!
+
 type
   FutProc[T] = () -> Future[T]
 
@@ -27,36 +29,30 @@ template empty(s: untyped): bool =
   s.len == 0
 
 proc asyncPool*[T](futProcs: seq[FutProc[T]]; poolSize = 4): Future[seq[T]] =
-  var queue = futProcs.toDeque()
-
-  var resultFut = newFuture[seq[T]]("asyncPool")
-  var activeCount = 0
-  var doneCount = 0
-  var vals: seq[T]
+  var
+    queue = futProcs.toDeque()
+    resultFut = newFuture[seq[T]]("asyncPool")
+    activeCount = 0
+    doneCount = 0
+    vals: seq[T]
 
   proc cb(fut: Future[T]) {.closure, gcsafe.}
 
   proc startOne() =
-    debugEcho "top"
-    dump queue.len
-    let futProc = queue.popFirst()
-    let fut = futProc()
+    let
+      futProc = queue.popFirst()
+      fut = futProc()
     fut.addCallback(cb)
     inc activeCount
-    debugEcho "bottom"
 
   proc cb(fut: Future[T]) =
     let val = fut.read
-    debugEcho "a future completed. value: ", val
     vals.add(val)
     inc doneCount
     dec activeCount
-    dump (queue.len, futProcs.len)
     if doneCount == futProcs.len:
-      debugEcho "all done"
       resultFut.complete(vals)
     elif not queue.empty:
-      debugEcho $queue.len & " left to go"
       if activeCount < poolSize:
         startOne()
 
@@ -64,23 +60,3 @@ proc asyncPool*[T](futProcs: seq[FutProc[T]]; poolSize = 4): Future[seq[T]] =
     startOne()
 
   resultFut
-
-proc fut(n: int): Future[int] {.async.} =
-  debugEcho "sleeping... n = ", n
-  # await sleepAsync(n * 1000)
-  await sleepAsync((6 - n + 1) * 1000)
-  debugEcho "done sleeping. n = ", n
-  return n
-
-when isMainModule:
-  let futProcs: seq[() -> Future[int]] = @[
-    () {.closure.} => fut(1),
-    () {.closure.} => fut(2),
-    () {.closure.} => fut(3),
-    () {.closure.} => fut(4),
-    () {.closure.} => fut(5),
-    () {.closure.} => fut(6),
-  ]
-  let x = waitFor asyncPool(futProcs)
-  debugEcho "end"
-  dump x
