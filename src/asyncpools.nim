@@ -23,40 +23,78 @@ import std/deques
 export deques # does not compile without this!
 
 type
+  AsyncPoolResult*[I, T] = object
+    values*: seq[T]
+    failures*: seq[I]
   FutProc[T] = () -> Future[T]
+  FutJob*[I, T] = object
+    info: I
+    futProc: FutProc[T]
+  FailureBehavior* = enum
+    fbContinue
+    fbAbort
+
+const
+  DefaultPoolSize* = 4
+  DefaultFailureBehavior* = fbAbort
 
 template empty(s: untyped): bool =
   s.len == 0
 
-proc asyncPool*[T](futProcs: seq[FutProc[T]]; poolSize = 4): Future[seq[T]] =
+func initFutJob*[I, T](info: I; futProc: FutProc[T]): FutJob[I, T] =
+  result.info = info
+  result.futProc = futProc
+
+func initAsyncPoolResult[I, T](values: seq[T]; failures: seq[I]): AsyncPoolResult[I, T] =
+  result.values = values
+  result.failures = failures
+
+proc asyncPool*[I, T](futJobs: seq[FutJob[I, T]]; poolSize = DefaultPoolSize; failureBehavior = DefaultFailureBehavior): Future[AsyncPoolResult[I, T]] =
   var
-    queue = futProcs.toDeque()
-    resultFut = newFuture[seq[T]]("asyncPool")
+    queue = futJobs.toDeque()
+    resultFut = newFuture[AsyncPoolResult[I, T]]("asyncPool")
     activeCount = 0
     doneCount = 0
-    vals: seq[T]
-
-  proc cb(fut: Future[T]) {.closure, gcsafe.}
+    values: seq[T]
+    failures: seq[I]
 
   proc startOne() =
     let
-      futProc = queue.popFirst()
+      futJob = queue.popFirst()
+      futProc = futJob.futProc
       fut = futProc()
+
+    proc cb(fut: Future[T]) =
+      inc doneCount
+      dec activeCount
+
+      if fut.failed:
+        case failureBehavior
+        of fbAbort:
+          discard fut.read # trigger exception
+        of fbContinue:
+          failures.add(futJob.info)
+      else:
+        let val = fut.read
+        values.add(val)
+
+      if doneCount == futJobs.len:
+        resultFut.complete(initAsyncPoolResult(values, failures))
+      elif not queue.empty:
+        if activeCount < poolSize:
+          startOne()
+
     fut.addCallback(cb)
     inc activeCount
 
-  proc cb(fut: Future[T]) =
-    let val = fut.read
-    vals.add(val)
-    inc doneCount
-    dec activeCount
-    if doneCount == futProcs.len:
-      resultFut.complete(vals)
-    elif not queue.empty:
-      if activeCount < poolSize:
-        startOne()
-
-  for _ in 0..<min(poolSize, futProcs.len):
+  for _ in 0..<min(poolSize, futJobs.len):
     startOne()
 
   resultFut
+
+proc asyncPool*[T](futProcs: seq[FutProc[T]]; poolSize = DefaultPoolSize; failureBehavior = DefaultFailureBehavior): Future[seq[T]] {.async.} =
+  let futJobs: seq[FutJob[string, T]] = futProcs.map(proc (futProc: FutProc[T]): FutJob[string, T] =
+    initFutJob("?", futProc)
+  )
+  let asyncPoolResult = await asyncPool[string, T](futJobs, poolSize, failureBehavior)
+  return asyncPoolResult.values
