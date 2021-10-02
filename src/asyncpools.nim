@@ -37,27 +37,29 @@ proc asyncPool*[T](futProcs: seq[FutProc[T]]; poolSize = DefaultPoolSize): Futur
     resultFut = newFuture[seq[T]]("asyncPool")
     activeCount = 0
     doneCount = 0
-    values: seq[T]
-
-  proc cb(fut: Future[T]) {.closure, gcsafe.}
+    curIdx = 0
+    values = newSeq[T](queue.len)
 
   proc startOne() =
+    let idx = curIdx
+
+    proc cb(fut: Future[T]) =
+      let val = fut.read
+      values[idx] = val
+      inc doneCount
+      dec activeCount
+      if doneCount == futProcs.len:
+        resultFut.complete(values)
+      elif not queue.empty:
+        if activeCount < poolSize:
+          startOne()
+
     let
       futProc = queue.popFirst()
       fut = futProc()
     fut.addCallback(cb)
     inc activeCount
-
-  proc cb(fut: Future[T]) =
-    let val = fut.read
-    values.add(val)
-    inc doneCount
-    dec activeCount
-    if doneCount == futProcs.len:
-      resultFut.complete(values)
-    elif not queue.empty:
-      if activeCount < poolSize:
-        startOne()
+    inc curIdx
 
   for _ in 0..<min(poolSize, futProcs.len):
     startOne()

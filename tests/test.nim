@@ -29,6 +29,4 @@ test "it works":
     outputs = waitFor asyncPool(futProcs, PoolSize)
   
   check isReachedPoolSize
-  check outputs.len == inputs.len
-  for x in inputs:
-    check outputs.contains(x)
+  check inputs == outputs
