@@ -16,4 +16,4 @@ requires "nim >= 1.4.8"
 
 task tag, "Create a git annotated tag with the current nimble version":
   let tagName = "v" & version
-  exec "git tag -a '" & tagName & "' -m '" & tagName & "'"
+  exec "git tag -a " & tagName & " -m " & tagName
