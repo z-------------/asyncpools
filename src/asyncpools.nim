@@ -22,16 +22,13 @@ import std/deques
 
 export deques # does not compile without this!
 
-type
-  FutProc[T] = () -> Future[T]
-
 const
   DefaultPoolSize* = 4
 
 template empty(s: untyped): bool =
   s.len == 0
 
-proc asyncPool*[T](futProcs: seq[FutProc[T]]; poolSize = DefaultPoolSize): Future[seq[T]] =
+proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): Future[seq[T]] =
   var
     queue = futProcs.toDeque()
     resultFut = newFuture[seq[T]]("asyncPool")

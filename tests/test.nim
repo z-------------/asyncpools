@@ -23,10 +23,10 @@ test "it works":
     await sleepAsync((inputs.high - n + 1) * SleepMultiplier)
     dec runningCount
     return n
-  
+
   let
-    futProcs = inputs.map(n => (() {.closure.} => fut(n)))
+    futProcs = inputs.map(n => (() => fut(n)))
     outputs = waitFor asyncPool(futProcs, PoolSize)
-  
+
   check isReachedPoolSize
   check inputs == outputs
