@@ -20,7 +20,7 @@ import std/asyncfutures
 import std/sugar
 import std/deques
 
-export deques # does not compile without this!
+export asyncdispatch
 
 const
   DefaultPoolSize* = 4
