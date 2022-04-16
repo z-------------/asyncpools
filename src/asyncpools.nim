@@ -21,6 +21,8 @@ import std/sugar
 import std/deques
 
 export asyncdispatch
+when NimMinor <= 4:
+  export deques
 
 const
   DefaultPoolSize* = 4
