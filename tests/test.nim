@@ -2,7 +2,6 @@ import asyncpools
 import std/unittest
 
 import std/sugar
-import std/asyncdispatch
 import std/sequtils
 
 test "it works":
