@@ -25,7 +25,7 @@ test "it works":
     return n
 
   let
-    futProcs = inputs.map(n => (() => fut(n)))
+    futProcs = inputs.mapIt(() => fut(it))
     outputs = waitFor asyncPool(futProcs, PoolSize)
 
   check isReachedPoolSize
@@ -41,7 +41,7 @@ test "it supports void futures":
   proc fut(n: int): Future[void] {.async.} =
     record.incl(n)
 
-  let futProcs = inputs.map(n => (() => fut(n)))
+  let futProcs = inputs.mapIt(() => fut(it))
   waitFor asyncPool(futProcs, PoolSize)
 
   check record == inputs.toHashSet
