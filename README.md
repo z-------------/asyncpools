@@ -1,5 +1,7 @@
 # asyncpools
 
+[![Pipeline status](https://gitlab.com/z-------------/asyncpools/badges/master/pipeline.svg)](https://gitlab.com/z-------------/asyncpools/pipelines)
+
 ## Example
 
 ```nim
