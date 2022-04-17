@@ -1,8 +1,9 @@
 import asyncpools
 import std/unittest
 
-import std/sugar
 import std/sequtils
+import std/sets
+import std/sugar
 
 test "it works":
   const
@@ -29,3 +30,18 @@ test "it works":
 
   check isReachedPoolSize
   check inputs == outputs
+
+test "it supports void futures":
+  const
+    PoolSize = 4
+    InputsCount = 10
+  var record: HashSet[int]
+  let inputs = (1..InputsCount).toSeq
+
+  proc fut(n: int): Future[void] {.async.} =
+    record.incl(n)
+
+  let futProcs = inputs.map(n => (() => fut(n)))
+  waitFor asyncPool(futProcs, PoolSize)
+
+  check record == inputs.toHashSet

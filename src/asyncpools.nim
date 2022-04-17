@@ -30,25 +30,36 @@ const
 template empty(s: untyped): bool =
   s.len == 0
 
-proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): Future[seq[T]] =
+proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): Future[seq[T]] | Future[void] =
+  when T is void:
+    type ResultType = void
+  else:
+    type ResultType = seq[T]
+
   var
     queue = futProcs.toDeque()
-    resultFut = newFuture[seq[T]]("asyncPool")
+    resultFut = newFuture[ResultType]("asyncPool")
     activeCount = 0
     doneCount = 0
     curIdx = 0
-    values = newSeq[T](queue.len)
+  when T isnot void:
+    var values = newSeq[T](queue.len)
 
   proc startOne() =
-    let idx = curIdx
+    when T isnot void:
+      let idx = curIdx
 
     proc cb(fut: Future[T]) =
-      let val = fut.read
-      values[idx] = val
+      when T isnot void:
+        let val = fut.read
+        values[idx] = val
       inc doneCount
       dec activeCount
       if doneCount == futProcs.len:
-        resultFut.complete(values)
+        when T is void:
+          resultFut.complete()
+        else:
+          resultFut.complete(values)
       elif not queue.empty:
         if activeCount < poolSize:
           startOne()
