@@ -1,0 +1,18 @@
+test:
+  stage: test
+  only:
+    - master
+  parallel:
+    matrix:
+      - NIM_VERSION:
+        - stable
+        - 1.4.8
+        NIM_MM:
+        - orc
+        - arc
+        - refc
+  before_script:
+    - curl https://nim-lang.org/choosenim/init.sh -sSf | CHOOSENIM_CHOOSE_VERSION=$NIM_VERSION sh -s -- -y
+    - PATH=/root/.nimble/bin:$PATH
+  script:
+    - nimble -y --gc:$NIM_MM test
