@@ -18,32 +18,25 @@
 import std/asyncdispatch
 import std/asyncfutures
 import std/sugar
-import std/deques
 
 export asyncdispatch
-when NimMinor <= 4:
-  export deques
 
 const
   DefaultPoolSize* = 4
 
-template empty(s: untyped): bool =
-  s.len == 0
-
-proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): Future[seq[T]] | Future[void] =
+proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): Future[seq[T]] or Future[void] =
   when T is void:
     type ResultType = void
   else:
     type ResultType = seq[T]
 
   var
-    queue = futProcs.toDeque()
     resultFut = newFuture[ResultType]("asyncPool")
     activeCount = 0
     doneCount = 0
     curIdx = 0
   when T isnot void:
-    var values = newSeq[T](queue.len)
+    var values = newSeq[T](futProcs.len)
 
   proc startOne() =
     when T isnot void:
@@ -60,16 +53,16 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): 
           resultFut.complete()
         else:
           resultFut.complete(values)
-      elif not queue.empty:
+      elif curIdx < futProcs.len:
         if activeCount < poolSize:
           startOne()
 
     let
-      futProc = queue.popFirst()
+      futProc = futProcs[curIdx]
       fut = futProc()
-    fut.addCallback(cb)
     inc activeCount
     inc curIdx
+    fut.addCallback(cb)
 
   for _ in 0..<min(poolSize, futProcs.len):
     startOne()
