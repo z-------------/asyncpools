@@ -7,6 +7,7 @@
 ```nim
 import pkg/asyncpools
 import std/[
+  asyncdispatch,
   sequtils,
   strformat,
   sugar,

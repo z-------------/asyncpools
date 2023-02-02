@@ -15,11 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with asyncpools.  If not, see <http://www.gnu.org/licenses/>.
 
-import std/asyncdispatch
-import std/asyncfutures
-import std/sugar
+const
+  asyncBackend {.strdefine.} = "asyncdispatch"
 
-export asyncdispatch
+when asyncBackend == "chronos":
+  import pkg/chronos
+  type CallbackArg[T] = pointer
+else:
+  import std/[
+    asyncdispatch,
+    asyncfutures,
+  ]
+  type CallbackArg[T] = Future[T]
+
+import std/sugar
 
 const
   DefaultPoolSize* = 4
@@ -42,10 +51,16 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): 
     when T isnot void:
       let idx = curIdx
 
-    proc cb(fut: Future[T]) =
+    let
+      futProc = futProcs[curIdx]
+      fut = futProc()
+
+    proc cb(arg: CallbackArg[T]) =
       when T isnot void:
-        let val = fut.read
-        values[idx] = val
+        try:
+          values[idx] = fut.read()
+        except CatchableError as e:
+          resultFut.fail(e)
       inc doneCount
       dec activeCount
       if doneCount == futProcs.len:
@@ -57,9 +72,6 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): 
         if activeCount < poolSize:
           startOne()
 
-    let
-      futProc = futProcs[curIdx]
-      fut = futProc()
     inc activeCount
     inc curIdx
     fut.addCallback(cb)
