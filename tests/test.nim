@@ -1,6 +1,7 @@
 import asyncpools
 import std/unittest
 
+import std/asyncdispatch
 import std/sequtils
 import std/sets
 import std/sugar
