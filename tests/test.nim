@@ -1,10 +1,17 @@
 import asyncpools
 import std/unittest
 
-import std/asyncdispatch
 import std/sequtils
 import std/sets
 import std/sugar
+
+const
+  asyncBackend {.strdefine.} = "asyncdispatch"
+
+when asyncBackend == "chronos":
+  import pkg/chronos
+else:
+  import std/asyncdispatch
 
 test "it works":
   const
