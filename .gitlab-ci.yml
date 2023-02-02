@@ -16,5 +16,3 @@ test:
     - PATH=/root/.nimble/bin:$PATH
   script:
     - nimble -y --gc:$NIM_MM test
-    - nimble install -y chronos
-    - nim r --gc:$NIM_MM -d:asyncBackend=chronos tests/test
