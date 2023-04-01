@@ -47,15 +47,15 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): 
   when T isnot void:
     var values = newSeq[T](futProcs.len)
 
-  proc startOne() =
+  proc startOne() {.gcsafe.} =
     when T isnot void:
       let idx = curIdx
 
-    let
-      futProc = futProcs[curIdx]
-      fut = futProc()
+    let futProc = futProcs[curIdx]
+    {.cast(gcsafe).}:
+      let fut = futProc()
 
-    proc cb(arg: CallbackArg[T]) =
+    proc cb(arg: CallbackArg[T]) {.gcsafe.} =
       when T isnot void:
         try:
           values[idx] = fut.read()
