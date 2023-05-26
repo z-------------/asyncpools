@@ -33,7 +33,7 @@ import std/sugar
 const
   DefaultPoolSize* = 4
 
-proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): Future[seq[T]] or Future[void] =
+proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize: Positive = DefaultPoolSize): Future[seq[T]] or Future[void] =
   when T is void:
     type ResultType = void
   else:
@@ -46,6 +46,12 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): 
     curIdx = 0
   when T isnot void:
     var values = newSeq[T](futProcs.len)
+
+  template finish =
+    when T is void:
+      resultFut.complete()
+    else:
+      resultFut.complete(values)
 
   proc startOne() {.gcsafe.} =
     when T isnot void:
@@ -64,10 +70,7 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): 
       inc doneCount
       dec activeCount
       if doneCount == futProcs.len:
-        when T is void:
-          resultFut.complete()
-        else:
-          resultFut.complete(values)
+        finish()
       elif curIdx < futProcs.len:
         if activeCount < poolSize:
           startOne()
@@ -76,7 +79,10 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize = DefaultPoolSize): 
     inc curIdx
     fut.addCallback(cb)
 
-  for _ in 0..<min(poolSize, futProcs.len):
-    startOne()
+  if futProcs.len > 0:
+    for _ in 0..<min(poolSize, futProcs.len):
+      startOne()
+  else:
+    finish()
 
   resultFut
