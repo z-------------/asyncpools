@@ -78,9 +78,13 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize: Positive = DefaultP
     for _ in 0 ..< workerCount:
       let workerFut = worker(futProcs, state)
       workerFut.addCallback do (_: CallbackArg[void]):
-        inc doneCount
-        if doneCount >= workerCount:
-          finish()
+        if not resultFut.finished:
+          if workerFut.failed:
+            resultFut.fail(workerFut.readError)
+          else:
+            inc doneCount
+            if doneCount >= workerCount:
+              finish()
   else:
     finish()
 
