@@ -33,6 +33,29 @@ import std/sugar
 const
   DefaultPoolSize* = 4
 
+type
+  PoolStateRef[T] = ref object
+    curIdx: int
+    when T isnot void:
+      values: seq[T]
+    else:
+      discard
+
+func new*[T](_: typedesc[PoolStateRef[T]]; valuesLen: int): PoolStateRef[T] {.raises: [].} =
+  result = PoolStateRef[T]()
+  when T isnot void:
+    result.values = newSeq[T](valuesLen)
+
+proc worker[T](futProcs: seq[() -> Future[T]]; state: PoolStateRef[T]) {.async.} =
+  while state.curIdx < futProcs.len:
+    let idx = state.curIdx
+    inc state.curIdx
+    let futProc = futProcs[idx]
+    when T isnot void:
+      state.values[idx] = await futProc()
+    else:
+      await futProc()
+
 proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize: Positive = DefaultPoolSize): Future[seq[T]] or Future[void] =
   when T is void:
     type ResultType = void
@@ -41,47 +64,23 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize: Positive = DefaultP
 
   var
     resultFut = newFuture[ResultType]("asyncPool")
-    activeCount = 0
     doneCount = 0
-    curIdx = 0
-  when T isnot void:
-    var values = newSeq[T](futProcs.len)
+    state = PoolStateRef[T].new(futProcs.len)
 
   template finish =
     when T is void:
       resultFut.complete()
     else:
-      resultFut.complete(values)
-
-  proc startOne() {.gcsafe.} =
-    when T isnot void:
-      let idx = curIdx
-
-    let futProc = futProcs[curIdx]
-    {.cast(gcsafe).}:
-      let fut = futProc()
-
-    proc cb(arg: CallbackArg[T]) {.gcsafe.} =
-      when T isnot void:
-        try:
-          values[idx] = fut.read()
-        except CatchableError as e:
-          resultFut.fail(e)
-      inc doneCount
-      dec activeCount
-      if doneCount == futProcs.len:
-        finish()
-      elif curIdx < futProcs.len:
-        if activeCount < poolSize:
-          startOne()
-
-    inc activeCount
-    inc curIdx
-    fut.addCallback(cb)
+      resultFut.complete(state.values)
 
   if futProcs.len > 0:
-    for _ in 0..<min(poolSize, futProcs.len):
-      startOne()
+    let workerCount = min(poolSize, futProcs.len)
+    for _ in 0 ..< workerCount:
+      let workerFut = worker(futProcs, state)
+      workerFut.addCallback do (_: CallbackArg[void]):
+        inc doneCount
+        if doneCount >= workerCount:
+          finish()
   else:
     finish()
 
