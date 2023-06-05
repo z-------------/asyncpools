@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.0.9"
+version       = "0.0.10"
 author        = "Zack Guard"
 description   = "Async pools"
 license       = "GPL-3.0-or-later"
