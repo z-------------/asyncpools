@@ -15,7 +15,7 @@ import std/[
   times,
 ]
 
-func elapsedSince(startTime: MonoTime): float =
+proc elapsedSince(startTime: MonoTime): float =
   (getMonoTime() - startTime).inMilliseconds / 1000
 
 const Count = 4
