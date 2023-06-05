@@ -8,24 +8,28 @@
 import pkg/asyncpools
 import std/[
   asyncdispatch,
+  monotimes,
   sequtils,
   strformat,
   sugar,
   times,
 ]
 
+func elapsedSince(startTime: MonoTime): float =
+  (getMonoTime() - startTime).inMilliseconds / 1000
+
 const Count = 4
 
 var runningCount = 0
 
-let startTime = cpuTime()
+let startTime = getMonoTime()
 
 proc doAsyncStuff(n: int): Future[string] {.async.} =
   inc runningCount
-  echo &"{n} began at {cpuTime() - startTime :.2f}; {runningCount} jobs are running"
+  echo &"{n} began at {elapsedSince(startTime) :.2f}; {runningCount} jobs are running"
   await sleepAsync((Count - n) * 500)
   dec runningCount
-  echo &"{n} ended at {cpuTime() - startTime :.2f}; {runningCount} jobs are running"
+  echo &"{n} ended at {elapsedSince(startTime) :.2f}; {runningCount} jobs are running"
   return $n
 
 let
