@@ -53,3 +53,10 @@ test "it supports void futures":
   waitFor asyncPool(futProcs, PoolSize)
 
   check record == inputs.toHashSet
+
+test "it works with empty input":
+  proc fut(n: int): Future[string] {.async.} =
+    discard
+  let futProcs = newSeq[int]().mapIt(() => fut(it))
+  let outputs = waitFor asyncPool(futProcs, 4)
+  check outputs == newSeq[string]()
