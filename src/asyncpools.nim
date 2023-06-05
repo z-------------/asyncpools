@@ -1,4 +1,4 @@
-# Copyright (C) 2021 Zack Guard
+# Copyright (C) 2021-2023 Zack Guard
 # 
 # This file is part of asyncpools.
 # 
