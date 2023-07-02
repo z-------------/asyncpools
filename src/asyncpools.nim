@@ -51,10 +51,19 @@ proc worker[T](futProcs: seq[() -> Future[T]]; state: PoolStateRef[T]) {.async.}
     let idx = state.curIdx
     inc state.curIdx
     let futProc = futProcs[idx]
-    when T isnot void:
-      state.values[idx] = await futProc()
+
+    when asyncBackend == "chronos":
+      template callFutProc: auto =
+        {.cast(gcsafe).}:
+          futProc()
     else:
-      await futProc()
+      template callFutProc: auto =
+        futProc()
+
+    when T isnot void:
+      state.values[idx] = await callFutProc()
+    else:
+      await callFutProc()
 
 proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize: Positive = DefaultPoolSize): Future[seq[T]] or Future[void] =
   when T is void:
@@ -80,7 +89,7 @@ proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize: Positive = DefaultP
       workerFut.addCallback do (_: CallbackArg[void]):
         if not resultFut.finished:
           if workerFut.failed:
-            resultFut.fail(workerFut.readError)
+            resultFut.fail(workerFut.error)
           else:
             inc doneCount
             if doneCount >= workerCount:

@@ -22,13 +22,14 @@ test "it works":
     runningCount = 0
     isReachedPoolSize = false
   let inputs = (1..InputsCount).toSeq
+  let inputsHigh = inputs.high
 
   proc fut(n: int): Future[int] {.async.} =
     inc runningCount
     check runningCount <= PoolSize
     if runningCount == PoolSize:
       isReachedPoolSize = true
-    await sleepAsync((inputs.high - n + 1) * SleepMultiplier)
+    await sleepAsync((inputsHigh - n + 1) * SleepMultiplier)
     dec runningCount
     return n
 
@@ -47,7 +48,8 @@ test "it supports void futures":
   let inputs = (1..InputsCount).toSeq
 
   proc fut(n: int): Future[void] {.async.} =
-    record.incl(n)
+    {.cast(gcsafe).}:
+      record.incl(n)
 
   let futProcs = inputs.mapIt(() => fut(it))
   waitFor asyncPool(futProcs, PoolSize)
