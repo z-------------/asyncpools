@@ -76,7 +76,9 @@ proc asyncPool*[T](futProcs: seq[GcsafeFutProc[T]] or seq[FutProc[T]]; poolSize:
     else:
       resultFut.complete(state.values)
 
-  if futProcs.len > 0:
+  if futProcs.len == 0:
+    finish()
+  else:
     let workerCount = min(poolSize, futProcs.len)
     var workerFuts = newSeq[Future[void]](workerCount)
     for i in 0 ..< workerCount:
@@ -90,7 +92,5 @@ proc asyncPool*[T](futProcs: seq[GcsafeFutProc[T]] or seq[FutProc[T]]; poolSize:
               inc doneCount
               if doneCount >= workerCount:
                 finish()
-  else:
-    finish()
 
   resultFut
