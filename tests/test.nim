@@ -94,7 +94,7 @@ test "it is gcsafe when the future procs are gcsafe":
 
   proc run(): Future[seq[string]] {.async, gcsafe.} =
     let futProcs = [1, 2].mapIt(() => fut(it))
-    await asyncPool(futProcs, 2)
+    return await asyncPool(futProcs, 2)
 
   let outputs = waitFor run()
   check outputs == ["1", "2"]
