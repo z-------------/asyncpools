@@ -20,13 +20,14 @@ test "it works":
     SleepMultiplier = 50
   var
     runningCount = 0
+    maxRunningCount = 0
     isReachedPoolSize = false
   let inputs = (1..InputsCount).toSeq
   let inputsHigh = inputs.high
 
   proc fut(n: int): Future[int] {.async.} =
     inc runningCount
-    check runningCount <= PoolSize
+    maxRunningCount = max(runningCount, maxRunningCount)
     if runningCount == PoolSize:
       isReachedPoolSize = true
     await sleepAsync((inputsHigh - n + 1) * SleepMultiplier)
@@ -37,6 +38,7 @@ test "it works":
     futProcs = inputs.mapIt(() => fut(it))
     outputs = waitFor asyncPool(futProcs, PoolSize)
 
+  check maxRunningCount == PoolSize
   check isReachedPoolSize
   check inputs == outputs
 
@@ -90,9 +92,9 @@ test "it is gcsafe when the future procs are gcsafe":
   proc fut(n: int): Future[string] {.async, gcsafe.} =
     return $n
 
-  proc run() {.async, gcsafe.} =
+  proc run(): Future[seq[string]] {.async, gcsafe.} =
     let futProcs = [1, 2].mapIt(() => fut(it))
-    let outputs = await asyncPool(futProcs, 2)
-    check outputs == ["1", "2"]
+    await asyncPool(futProcs, 2)
 
-  waitFor run()
+  let outputs = waitFor run()
+  check outputs == ["1", "2"]
