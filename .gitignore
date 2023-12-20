@@ -5,3 +5,6 @@
 .vscode
 *.exe
 *.swp
+
+nim.cfg
+tests/*.nimble

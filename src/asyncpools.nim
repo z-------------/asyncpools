@@ -40,13 +40,15 @@ type
       values: seq[T]
     else:
       discard
+  GcsafeFutProc[T] = proc (): Future[T] {.gcsafe.}
+  FutProc[T] = proc (): Future[T]
 
 func new*[T](_: typedesc[PoolStateRef[T]]; valuesLen: int): PoolStateRef[T] {.raises: [].} =
   result = PoolStateRef[T]()
   when T isnot void:
     result.values = newSeq[T](valuesLen)
 
-proc worker[T](futProcs: seq[() -> Future[T]]; state: PoolStateRef[T]) {.async.} =
+proc worker[T](futProcs: seq[GcsafeFutProc[T]] or seq[FutProc[T]]; state: PoolStateRef[T]) {.async.} =
   while state.curIdx < futProcs.len:
     let idx = state.curIdx
     inc state.curIdx
@@ -65,7 +67,7 @@ proc worker[T](futProcs: seq[() -> Future[T]]; state: PoolStateRef[T]) {.async.}
     else:
       await callFutProc()
 
-proc asyncPool*[T](futProcs: seq[() -> Future[T]]; poolSize: Positive = DefaultPoolSize): Future[seq[T]] or Future[void] =
+proc asyncPool*[T](futProcs: seq[GcsafeFutProc[T]] or seq[FutProc[T]]; poolSize: Positive = DefaultPoolSize): Future[seq[T]] or Future[void] =
   when T is void:
     type ResultType = void
   else:

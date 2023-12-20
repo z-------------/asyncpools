@@ -73,3 +73,14 @@ test "it handles errors":
   let futProcs = (1..8).toSeq.mapIt(() => fut(it))
   expect MyError:
     waitFor asyncPool(futProcs, 4)
+
+test "it is gcsafe when the future procs are gcsafe":
+  proc fut(n: int): Future[string] {.async, gcsafe.} =
+    return $n
+
+  proc run() {.async, gcsafe.} =
+    let futProcs = [1, 2].mapIt(() => fut(it))
+    let outputs = await asyncPool(futProcs, 2)
+    check outputs == ["1", "2"]
+
+  waitFor run()
