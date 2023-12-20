@@ -74,6 +74,18 @@ test "it handles errors":
   expect MyError:
     waitFor asyncPool(futProcs, 4)
 
+test "it really handles errors":
+  type MyError = object of CatchableError
+
+  proc fut(n: int) {.async.} =
+    await sleepAsync(100)
+    if n == 7:
+      raise newException(MyError, ":(")
+
+  let futProcs = (1..8).toSeq.mapIt(() => fut(it))
+  expect MyError:
+    waitFor asyncPool(futProcs, 4)
+
 test "it is gcsafe when the future procs are gcsafe":
   proc fut(n: int): Future[string] {.async, gcsafe.} =
     return $n

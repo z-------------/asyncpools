@@ -43,7 +43,7 @@ type
   GcsafeFutProc[T] = proc (): Future[T] {.gcsafe.}
   FutProc[T] = proc (): Future[T]
 
-func new*[T](_: typedesc[PoolStateRef[T]]; valuesLen: int): PoolStateRef[T] {.raises: [].} =
+func new[T](_: typedesc[PoolStateRef[T]]; valuesLen: int): PoolStateRef[T] {.raises: [].} =
   result = PoolStateRef[T]()
   when T isnot void:
     result.values = newSeq[T](valuesLen)
@@ -86,16 +86,18 @@ proc asyncPool*[T](futProcs: seq[GcsafeFutProc[T]] or seq[FutProc[T]]; poolSize:
 
   if futProcs.len > 0:
     let workerCount = min(poolSize, futProcs.len)
-    for _ in 0 ..< workerCount:
-      let workerFut = worker(futProcs, state)
-      workerFut.addCallback do (_: CallbackArg[void]):
-        if not resultFut.finished:
-          if workerFut.failed:
-            resultFut.fail(workerFut.error)
-          else:
-            inc doneCount
-            if doneCount >= workerCount:
-              finish()
+    var workerFuts = newSeq[Future[void]](workerCount)
+    for i in 0 ..< workerCount:
+      workerFuts[i] = worker(futProcs, state)
+      capture i:
+        workerFuts[i].addCallback do (_: CallbackArg[void]):
+          if not resultFut.finished:
+            if workerFuts[i].failed:
+              resultFut.fail(workerFuts[i].error)
+            else:
+              inc doneCount
+              if doneCount >= workerCount:
+                finish()
   else:
     finish()
 
