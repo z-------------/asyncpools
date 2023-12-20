@@ -54,18 +54,10 @@ proc worker[T](futProcs: seq[GcsafeFutProc[T]] or seq[FutProc[T]]; state: PoolSt
     inc state.curIdx
     let futProc = futProcs[idx]
 
-    when asyncBackend == "chronos":
-      template callFutProc: auto =
-        {.cast(gcsafe).}:
-          futProc()
-    else:
-      template callFutProc: auto =
-        futProc()
-
     when T isnot void:
-      state.values[idx] = await callFutProc()
+      state.values[idx] = await futProc()
     else:
-      await callFutProc()
+      await futProc()
 
 proc asyncPool*[T](futProcs: seq[GcsafeFutProc[T]] or seq[FutProc[T]]; poolSize: Positive = DefaultPoolSize): Future[seq[T]] or Future[void] =
   when T is void:
