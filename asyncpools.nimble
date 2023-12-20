@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.0.12"
+version       = "0.0.13"
 author        = "Zack Guard"
 description   = "Async-based limited concurrency"
 license       = "GPL-3.0-or-later"
