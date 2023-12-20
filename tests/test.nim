@@ -1,4 +1,4 @@
-import asyncpools
+import pkg/asyncpools
 import std/unittest
 
 import std/sequtils

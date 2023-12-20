@@ -2,9 +2,9 @@
 
 version       = "0.0.12"
 author        = "Zack Guard"
-description   = "Async pools"
+description   = "Async-based limited concurrency"
 license       = "GPL-3.0-or-later"
-srcDir        = "src"
+srcDir        = "."
 
 # Dependencies
 
