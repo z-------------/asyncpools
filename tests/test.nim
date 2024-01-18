@@ -10,6 +10,9 @@ const
 
 when asyncBackend == "chronos":
   import pkg/chronos
+
+  proc sleepAsync(ms: int): Future[void] =
+    chronos.sleepAsync(ms.milliseconds)
 else:
   import std/asyncdispatch
 
