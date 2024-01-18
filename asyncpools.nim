@@ -40,15 +40,19 @@ type
       values: seq[T]
     else:
       discard
-  GcsafeFutProc[T] = proc (): Future[T] {.gcsafe.}
-  FutProc[T] = proc (): Future[T]
+  GcsafeFutProc[T] =
+    proc (): Future[T] {.gcsafe, nimcall.} or
+    proc (): Future[T] {.gcsafe.}
+  FutProc[T] =
+    proc (): Future[T] {.nimcall.} or
+    proc (): Future[T]
 
 func new[T](_: typedesc[PoolStateRef[T]]; valuesLen: int): PoolStateRef[T] {.raises: [].} =
   result = PoolStateRef[T]()
   when T isnot void:
     result.values = newSeq[T](valuesLen)
 
-proc worker[T](futProcs: seq[GcsafeFutProc[T]] or seq[FutProc[T]]; state: PoolStateRef[T]) {.async.} =
+proc worker[T](futProcs: seq[proc]; state: PoolStateRef[T]) {.async.} =
   while state.curIdx < futProcs.len:
     let idx = state.curIdx
     inc state.curIdx

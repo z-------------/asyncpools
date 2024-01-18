@@ -98,3 +98,11 @@ test "it is gcsafe when the future procs are gcsafe":
 
   let outputs = waitFor run()
   check outputs == ["1", "2"]
+
+test "it works with non-closures":
+  proc gcsafeFutProc(): Future[void] {.nimcall.} =
+    let fut = newFuture[void]()
+    fut.complete()
+    fut
+
+  waitFor asyncPool(@[gcsafeFutProc])
