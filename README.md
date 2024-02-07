@@ -1,6 +1,6 @@
 # asyncpools
 
-[![Pipeline status](https://gitlab.com/z-------------/asyncpools/badges/master/pipeline.svg)](https://gitlab.com/z-------------/asyncpools/pipelines)
+[![Test status](https://github.com/z-------------/asyncpools/actions/workflows/test.yaml/badge.svg)](https://github.com/z-------------/asyncpools/actions/workflows/test.yaml)
 
 ## Example
 
