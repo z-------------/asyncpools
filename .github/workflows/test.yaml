@@ -12,6 +12,9 @@ jobs:
         nim-version:
           - stable
           - 1.6.20
+        chronos:
+          - ''
+          - '-d:asyncBackend=chronos'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -19,4 +22,8 @@ jobs:
         with:
           nim-version: ${{ matrix.nim-version }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nimble test -y
+      - if: ${{ matrix.chronos }}
+        run: |
+          nimble install chronos -y
+          echo 'requires "chronos"' >> asyncpools.nimble
+      - run: nimble test -y ${{ matrix.chronos }}
