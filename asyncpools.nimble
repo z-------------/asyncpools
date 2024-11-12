@@ -9,3 +9,4 @@ srcDir        = "."
 # Dependencies
 
 requires "nim >= 1.6.20"
+taskRequires "test", "chronos >= 4.0.0"

@@ -6,5 +6,9 @@
 *.exe
 *.swp
 
-nim.cfg
+/nim.cfg
+config.nims
+nimble.develop
+nimble.paths
+nimbledeps
 tests/*.nimble
