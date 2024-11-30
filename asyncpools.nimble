@@ -8,5 +8,5 @@ srcDir        = "."
 
 # Dependencies
 
-requires "nim >= 1.6.20"
+requires "nim >= 2.0.12"
 taskRequires "test", "chronos >= 4.0.0"

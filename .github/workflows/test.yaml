@@ -11,14 +11,14 @@ jobs:
           - windows-latest
         nim-version:
           - stable
-          - 1.6.20
+          - 2.0.12
         chronos:
           - ''
           - '-d:asyncBackend=chronos'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: jiro4989/setup-nim-action@v1
+      - uses: jiro4989/setup-nim-action@v2
         with:
           nim-version: ${{ matrix.nim-version }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
